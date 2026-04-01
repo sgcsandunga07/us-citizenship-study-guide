@@ -252,8 +252,8 @@ export default function App() {
           <div style={{ textAlign:"center", marginBottom:40, paddingTop:20 }}>
             <div style={{ fontSize:48, marginBottom:8 }}>🇺🇸</div>
             <h1 style={{ color:"#f1f5f9", fontSize:28, fontWeight:800, margin:0, letterSpacing:"-0.5px" }}>U.S. Citizenship Exam</h1>
-            <p style={{ color:"#94a3b8", fontSize:15, margin:"8px 0 0" }}>128 questions · {ctxCount} with historical context 📜</p>
-<p style={{ color:"#64748b", fontSize:12, margin:"4px 0 0" }}>Created by Sandra Chavez, año 2026 ,para uso persona, GUIA PARA EL ESTADO DE TEXAS</p>
+            <p style={{ color:"#f1f5f9", fontSize:15, margin:"8px 0 0" }}>128 questions · {ctxCount} with historical context 📜</p>
+<p style={{ color:"#f1f5f9", fontSize:18, margin:"4px 0 0" }}>Created by Sandra Chavez, año 2026 ,para uso personal, GUIA PARA EL ESTADO DE TEXAS</p>
             <button onClick={() => setCtxLang(l => l === "en" ? "es" : "en")} style={{ marginTop:12, background:"#1e293b", color:"#f59e0b", border:"1px solid #92400e44", borderRadius:20, padding:"6px 16px", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all 0.15s" }}>🌐 {ctxLang === "en" ? "Context: English → Español" : "Contexto: Español → English"}</button>
 
             <div style={{ marginTop:24, background:"#1e293b", borderRadius:12, padding:16, border:"1px solid #334155" }}>
