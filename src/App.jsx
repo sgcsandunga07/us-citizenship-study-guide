@@ -153,6 +153,7 @@ const categories = [...new Set(questions.map(q => q.cat))];
 const catIcons = {"Principles of American Government":"⚖️","System of Government":"🏛️","Rights and Responsibilities":"🗳️","Colonial Period and Independence":"🔔","The 1800s":"📜","Recent American History":"🌍","Symbols":"🇺🇸","Holidays":"🎆"};
 const catColors = {"Principles of American Government":"#4a90d9","System of Government":"#4caf7d","Rights and Responsibilities":"#b06ab3","Colonial Period and Independence":"#d4915e","The 1800s":"#d45e5e","Recent American History":"#5eb8d4","Symbols":"#d4c75e","Holidays":"#d45e8c"};
 
+const speakAnswer = (a) => a.replace(/\s*\/\s*/g, ". Or: ").replace(/[()]/g, "");
 const shuffle = a => {const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;};
 
 // ── SPEECH HELPER ──
@@ -252,7 +253,8 @@ export default function App() {
           <div style={{fontSize:44,marginBottom:4}}>🇺🇸</div>
           <h1 style={{color:"#f1f5f9",fontSize:26,fontWeight:800,margin:0,letterSpacing:"-0.5px"}}>U.S. Citizenship Exam</h1>
           <p style={{color:"#94a3b8",fontSize:14,margin:"6px 0 0"}}>128 Official USCIS 2025 Questions</p>
-          <p style={{color:"#64748b",fontSize:11,margin:"2px 0 0"}}>Created by Sandra Chávez · Only for personal study purposes, for Texas</p>
+          <p style={{color:"#64748b",fontSize:11,margin:"4px 0 0"}}>Created by <span style={{color:"#ffffff",fontSize:15,fontWeight:700}}>Sandra Chávez</span></p>
+          <p style={{color:"#64748b",fontSize:10,margin:"2px 0 0"}}>Only for personal study purposes, for Texas</p>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
             <button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:"#1e293b",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"Context: EN → ES":"Contexto: ES → EN"}</button>
             <button onClick={()=>setStarOnly(s=>!s)} style={{background:starOnly?"#7c3aed":"#1e293b",color:starOnly?"#fff":"#a78bfa",border:"1px solid #6d28d944",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>⭐ 65/20 {starOnly?"ON":"OFF"}</button>
@@ -366,7 +368,7 @@ export default function App() {
                     <button onClick={()=>setShowAnswer(showAnswer===q.id?null:q.id)} style={{background:"#0f172a",color:"#94a3b8",border:"1px solid #334155",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>{showAnswer===q.id?"Hide":"Answer"}</button>
                     {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"#0f172a",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
                   </div>
-                  {showAnswer===q.id&&<div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6}}><div style={{color:"#4ade80",fontSize:12,padding:"6px 10px",background:"#0a2618",borderRadius:8,flex:1}}>{q.a}</div><AudioBtn text={q.a.split("/")[0].trim()}/></div>}
+                  {showAnswer===q.id&&<div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6}}><div style={{color:"#4ade80",fontSize:12,padding:"6px 10px",background:"#0a2618",borderRadius:8,flex:1}}>{q.a}</div><AudioBtn text={speakAnswer(q.a)}/></div>}
                   {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#fbbf24",fontSize:11,lineHeight:1.5,marginBottom:6,padding:"8px 10px",background:"#1c1508",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={()=>setQuizAnswers(p=>({...p,[q.id]:"correct"}))} style={{flex:1,background:quizAnswers[q.id]==="correct"?"#065f46":"#0f172a",color:quizAnswers[q.id]==="correct"?"#4ade80":"#64748b",border:quizAnswers[q.id]==="correct"?"2px solid #10b981":"1px solid #334155",borderRadius:10,padding:"7px",fontSize:12,fontWeight:600,cursor:"pointer"}}>✓ Knew it</button>
@@ -375,7 +377,7 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{marginLeft:32}}>
-                  <div style={{display:"flex",alignItems:"flex-start",gap:6}}><div style={{color:"#94a3b8",fontSize:12,padding:"6px 10px",background:"#0f172a",borderRadius:8,flex:1}}><strong style={{color:"#e2e8f0"}}>A:</strong> {q.a}</div><AudioBtn text={q.a.split("/")[0].trim()}/></div>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:6}}><div style={{color:"#94a3b8",fontSize:12,padding:"6px 10px",background:"#0f172a",borderRadius:8,flex:1}}><strong style={{color:"#e2e8f0"}}>A:</strong> {q.a}</div><AudioBtn text={speakAnswer(q.a)}/></div>
                   {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"none",border:"none",color:"#f59e0b",fontSize:11,cursor:"pointer",padding:0,marginTop:6}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
                   {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#fbbf24",fontSize:11,lineHeight:1.5,marginTop:4,padding:"8px 10px",background:"#1c1508",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
                 </div>
@@ -442,7 +444,7 @@ export default function App() {
                   <div style={{animation:"fadeIn 0.3s ease"}}>
                     <div style={{background:"#0a2618",borderRadius:12,padding:14,marginBottom:10,borderLeft:"4px solid #10b981",display:"flex",alignItems:"flex-start",gap:8}}>
                       <p style={{color:"#4ade80",fontSize:15,fontWeight:600,margin:0,lineHeight:1.5,flex:1}}>{currentQ.a}</p>
-                      <AudioBtn text={currentQ.a.split("/")[0].trim()} size="md"/>
+                      <AudioBtn text={speakAnswer(currentQ.a)} size="md"/>
                     </div>
 
                     {currentQ.ctx && (
