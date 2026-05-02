@@ -1,8 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-
-// ═══════════════════════════════════════════════════════════════
-// OFFICIAL USCIS 2025 CIVICS TEST — 128 QUESTIONS (M-1778 09/25)
-// ═══════════════════════════════════════════════════════════════
+import { useState, useEffect, useMemo } from "react";
 const questions = [
 // ── AMERICAN GOVERNMENT: A. Principles of American Government ──
 {id:1,q:"What is the form of government of the United States?",a:"Republic / Constitution-based federal republic / Representative democracy",cat:"Principles of American Government",star:false,ctx:"The U.S. is a republic where citizens elect representatives to govern on their behalf. The Constitution establishes a federal system where power is shared between national and state governments. Unlike a direct democracy, citizens vote for leaders who make laws.",ctxEs:"EE.UU. es una república donde los ciudadanos eligen representantes. La Constitución establece un sistema federal donde el poder se comparte entre el gobierno nacional y los estatales."},
@@ -148,318 +144,287 @@ const questions = [
 {id:127,q:"What is Memorial Day?",a:"A holiday to honor soldiers who died in military service",cat:"Holidays",star:false},
 {id:128,q:"What is Veterans Day?",a:"A holiday to honor people in the (U.S.) military / A holiday to honor people who have served (in the U.S. military)",cat:"Holidays",star:false},
 ];
-
 const categories = [...new Set(questions.map(q => q.cat))];
 const catIcons = {"Principles of American Government":"⚖️","System of Government":"🏛️","Rights and Responsibilities":"🗳️","Colonial Period and Independence":"🔔","The 1800s":"📜","Recent American History":"🌍","Symbols":"🇺🇸","Holidays":"🎆"};
-const catColors = {"Principles of American Government":"#4a90d9","System of Government":"#4caf7d","Rights and Responsibilities":"#b06ab3","Colonial Period and Independence":"#d4915e","The 1800s":"#d45e5e","Recent American History":"#5eb8d4","Symbols":"#d4c75e","Holidays":"#d45e8c"};
+const catAccent = {"Principles of American Government":"#2563eb","System of Government":"#059669","Rights and Responsibilities":"#7c3aed","Colonial Period and Independence":"#d97706","The 1800s":"#dc2626","Recent American History":"#0891b2","Symbols":"#ca8a04","Holidays":"#e11d48"};
 
-const speakAnswer = (a) => a.replace(/\s*\/\s*/g, ". Or: ").replace(/[()]/g, "");
+const AnswerList = ({text}) => {
+  const items = text.split("/").map(s => s.trim()).filter(Boolean);
+  if (items.length <= 1) return <span>{text}</span>;
+  return <ul style={{margin:0,padding:"4px 0 0 0",listStyle:"none"}}>{items.map((it,i) => <li key={i} style={{fontSize:14,lineHeight:1.8,paddingLeft:16,position:"relative"}}><span style={{position:"absolute",left:0,color:"#2563eb",fontWeight:700}}>•</span>{it}</li>)}</ul>;
+};
+
+const speakAnswer = a => a.replace(/\s*\/\s*/g, ". Or: ").replace(/[()]/g, "");
 const shuffle = a => {const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;};
 
-// ── SPEECH HELPER ──
 const speak = (text, onEnd) => {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-US"; u.rate = 0.85; u.pitch = 1;
   const voices = window.speechSynthesis.getVoices();
-  const usVoice = voices.find(v => v.lang === "en-US" && v.name.includes("Google")) || voices.find(v => v.lang === "en-US") || voices[0];
-  if (usVoice) u.voice = usVoice;
+  const v = voices.find(v => v.lang==="en-US"&&v.name.includes("Google")) || voices.find(v => v.lang==="en-US") || voices[0];
+  if (v) u.voice = v;
   if (onEnd) u.onend = onEnd;
   window.speechSynthesis.speak(u);
 };
 
-// ── AUDIO BUTTON COMPONENT ──
 const AudioBtn = ({text, size="sm"}) => {
-  const [playing, setPlaying] = useState(false);
-  const play = (e) => { e.stopPropagation(); setPlaying(true); speak(text, () => setPlaying(false)); };
-  const stop = (e) => { e.stopPropagation(); window.speechSynthesis.cancel(); setPlaying(false); };
-  const s = size==="sm" ? {padding:"4px 8px",fontSize:12} : {padding:"6px 12px",fontSize:13};
-  return <button onClick={playing ? stop : play} style={{...s, background: playing?"#1e40af":"#0f172a", color: playing?"#93c5fd":"#64748b", border:"1px solid #334155", borderRadius:8, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4, transition:"all 0.15s", flexShrink:0}}>{playing ? "⏹" : "🔊"}</button>;
+  const [on, setOn] = useState(false);
+  const play = e => { e.stopPropagation(); setOn(true); speak(text, ()=>setOn(false)); };
+  const stop = e => { e.stopPropagation(); window.speechSynthesis.cancel(); setOn(false); };
+  return <button onClick={on?stop:play} style={{padding:size==="sm"?"4px 8px":"6px 12px",fontSize:size==="sm"?12:14,background:on?"#2563eb":"#f1f5f9",color:on?"#fff":"#64748b",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:3,flexShrink:0,transition:"all 0.15s"}}>{on?"⏹":"🔊"}</button>;
 };
 
-// ═══════════════════════════════════════════════════
-// APP
-// ═══════════════════════════════════════════════════
 export default function App() {
-  const saved = useMemo(() => { try { return JSON.parse(localStorage.getItem("s2") || "{}"); } catch { return {}; } }, []);
-  const [mode, setMode] = useState(saved.mode || "menu");
-  const [selectedCat, setSelectedCat] = useState(saved.selectedCat || null);
-  const [currentIdx, setCurrentIdx] = useState(saved.currentIdx || 0);
+  const saved = useMemo(() => { try { return JSON.parse(localStorage.getItem("s3")||"{}"); } catch { return {}; } }, []);
+  const [mode, setMode] = useState(saved.mode||"menu");
+  const [selectedCat, setSelectedCat] = useState(saved.selectedCat||null);
+  const [currentIdx, setCurrentIdx] = useState(saved.currentIdx||0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showContext, setShowContext] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState(() => { try { return JSON.parse(localStorage.getItem("qQs") || "[]"); } catch { return []; } });
-  const [quizAnswers, setQuizAnswers] = useState(() => { try { return JSON.parse(localStorage.getItem("qAn") || "{}"); } catch { return {}; } });
+  const [quizQuestions, setQuizQuestions] = useState(()=>{ try { return JSON.parse(localStorage.getItem("qQ3")||"[]"); } catch { return []; } });
+  const [quizAnswers, setQuizAnswers] = useState(()=>{ try { return JSON.parse(localStorage.getItem("qA3")||"{}"); } catch { return {}; } });
   const [quizShowCtx, setQuizShowCtx] = useState({});
-  const [knownSet, setKnownSet] = useState(() => { try { return new Set(JSON.parse(localStorage.getItem("kn") || "[]")); } catch { return new Set(); } });
-  const [studyFilter, setStudyFilter] = useState(saved.studyFilter || "all");
-  const [quizSize, setQuizSize] = useState(saved.quizSize || 10);
-  const [quizSubmitted, setQuizSubmitted] = useState(saved.quizSubmitted || false);
+  const [knownSet, setKnownSet] = useState(()=>{ try { return new Set(JSON.parse(localStorage.getItem("k3")||"[]")); } catch { return new Set(); } });
+  const [studyFilter, setStudyFilter] = useState(saved.studyFilter||"all");
+  const [quizSize, setQuizSize] = useState(saved.quizSize||10);
+  const [quizSubmitted, setQuizSubmitted] = useState(saved.quizSubmitted||false);
   const [animKey, setAnimKey] = useState(0);
-  const [ctxLang, setCtxLang] = useState(() => { try { return localStorage.getItem("cl") || "en"; } catch { return "en"; } });
+  const [ctxLang, setCtxLang] = useState(()=>{ try { return localStorage.getItem("c3")||"en"; } catch { return "en"; } });
   const [starOnly, setStarOnly] = useState(false);
-  const getCtx = (q) => ctxLang === "es" && q.ctxEs ? q.ctxEs : q.ctx;
+  const getCtx = q => ctxLang==="es"&&q.ctxEs ? q.ctxEs : q.ctx;
 
-  // Persist
-  useEffect(() => { try { localStorage.setItem("s2", JSON.stringify({mode,selectedCat,currentIdx,studyFilter,quizSize,quizSubmitted})); } catch {} }, [mode,selectedCat,currentIdx,studyFilter,quizSize,quizSubmitted]);
-  useEffect(() => { try { localStorage.setItem("kn", JSON.stringify([...knownSet])); } catch {} }, [knownSet]);
-  useEffect(() => { try { localStorage.setItem("cl", ctxLang); } catch {} }, [ctxLang]);
-  useEffect(() => { try { localStorage.setItem("qQs", JSON.stringify(quizQuestions)); } catch {} }, [quizQuestions]);
-  useEffect(() => { try { localStorage.setItem("qAn", JSON.stringify(quizAnswers)); } catch {} }, [quizAnswers]);
+  useEffect(()=>{ try{localStorage.setItem("s3",JSON.stringify({mode,selectedCat,currentIdx,studyFilter,quizSize,quizSubmitted}));}catch{} },[mode,selectedCat,currentIdx,studyFilter,quizSize,quizSubmitted]);
+  useEffect(()=>{ try{localStorage.setItem("k3",JSON.stringify([...knownSet]));}catch{} },[knownSet]);
+  useEffect(()=>{ try{localStorage.setItem("c3",ctxLang);}catch{} },[ctxLang]);
+  useEffect(()=>{ try{localStorage.setItem("qQ3",JSON.stringify(quizQuestions));}catch{} },[quizQuestions]);
+  useEffect(()=>{ try{localStorage.setItem("qA3",JSON.stringify(quizAnswers));}catch{} },[quizAnswers]);
+  useEffect(()=>{ window.speechSynthesis?.getVoices(); const h=()=>window.speechSynthesis?.getVoices(); window.speechSynthesis?.addEventListener?.("voiceschanged",h); return ()=>window.speechSynthesis?.removeEventListener?.("voiceschanged",h); },[]);
 
-  // Load voices
-  useEffect(() => { window.speechSynthesis?.getVoices(); const h = () => window.speechSynthesis?.getVoices(); window.speechSynthesis?.addEventListener?.("voiceschanged", h); return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", h); }, []);
-
-  const filteredQuestions = useMemo(() => {
-    let qs = selectedCat ? questions.filter(q => q.cat === selectedCat) : questions;
-    if (starOnly) qs = qs.filter(q => q.star);
-    if (studyFilter === "unknown") qs = qs.filter(q => !knownSet.has(q.id));
-    if (studyFilter === "known") qs = qs.filter(q => knownSet.has(q.id));
+  const filteredQuestions = useMemo(()=>{
+    let qs = selectedCat ? questions.filter(q=>q.cat===selectedCat) : questions;
+    if(starOnly) qs=qs.filter(q=>q.star);
+    if(studyFilter==="unknown") qs=qs.filter(q=>!knownSet.has(q.id));
+    if(studyFilter==="known") qs=qs.filter(q=>knownSet.has(q.id));
     return qs;
-  }, [selectedCat, studyFilter, knownSet, starOnly]);
+  },[selectedCat,studyFilter,knownSet,starOnly]);
 
   const currentQ = filteredQuestions[currentIdx];
-  const toggleKnown = id => setKnownSet(p => { const n = new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
+  const toggleKnown = id => setKnownSet(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+  const startStudy = cat => { setSelectedCat(cat); try{const p=JSON.parse(localStorage.getItem("cp3")||"{}");setCurrentIdx(p[cat||"__a"]||0);}catch{setCurrentIdx(0);} setShowAnswer(false);setShowContext(false);setMode("study");setAnimKey(k=>k+1); };
+  const startQuiz = () => { let pool=selectedCat?questions.filter(q=>q.cat===selectedCat):questions; if(starOnly)pool=pool.filter(q=>q.star); setQuizQuestions(shuffle(pool).slice(0,quizSize)); setQuizAnswers({});setQuizShowCtx({});setQuizSubmitted(false);setMode("quiz"); };
+  const nav = dir => { const next=currentIdx+dir; if(next>=0&&next<filteredQuestions.length){setCurrentIdx(next);setShowAnswer(false);setShowContext(false);setAnimKey(k=>k+1);try{const p=JSON.parse(localStorage.getItem("cp3")||"{}");p[selectedCat||"__a"]=next;localStorage.setItem("cp3",JSON.stringify(p));}catch{}} };
+  const progress = questions.length>0?Math.round((knownSet.size/questions.length)*100):0;
 
-  const startStudy = cat => {
-    setSelectedCat(cat);
-    try { const p = JSON.parse(localStorage.getItem("cp") || "{}"); setCurrentIdx(p[cat||"__all__"]||0); } catch { setCurrentIdx(0); }
-    setShowAnswer(false); setShowContext(false); setMode("study"); setAnimKey(k=>k+1);
-  };
-  const startQuiz = () => {
-    let pool = selectedCat ? questions.filter(q=>q.cat===selectedCat) : questions;
-    if (starOnly) pool = pool.filter(q=>q.star);
-    setQuizQuestions(shuffle(pool).slice(0,quizSize));
-    setQuizAnswers({}); setQuizShowCtx({}); setQuizSubmitted(false); setMode("quiz");
-  };
-  const nav = dir => {
-    const next = currentIdx + dir;
-    if (next >= 0 && next < filteredQuestions.length) {
-      setCurrentIdx(next); setShowAnswer(false); setShowContext(false); setAnimKey(k=>k+1);
-      try { const p = JSON.parse(localStorage.getItem("cp")||"{}"); p[selectedCat||"__all__"]=next; localStorage.setItem("cp",JSON.stringify(p)); } catch {}
-    }
-  };
-
-  const progress = questions.length > 0 ? Math.round((knownSet.size / questions.length) * 100) : 0;
-  const starQs = questions.filter(q=>q.star);
-  const bg = "linear-gradient(165deg, #0a0e1a 0%, #111827 50%, #0f172a 100%)";
-  const font = "'Segoe UI', system-ui, -apple-system, sans-serif";
+  const W = {bg:"#f8fafc",card:"#ffffff",cardBorder:"#e2e8f0",sub:"#64748b",text:"#0f172a",muted:"#94a3b8",pill:"#f1f5f9",pillActive:"#e2e8f0"};
+  const font = "'Segoe UI',system-ui,-apple-system,sans-serif";
 
   // ─── MENU ───
-  if (mode === "menu") return (
-    <div style={{minHeight:"100vh",background:bg,padding:"24px 16px",fontFamily:font}}>
+  if(mode==="menu") return (
+    <div style={{minHeight:"100vh",background:W.bg,padding:"24px 16px",fontFamily:font}}>
       <div style={{maxWidth:720,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:32,paddingTop:16}}>
+        <div style={{textAlign:"center",marginBottom:28,paddingTop:12}}>
           <div style={{fontSize:44,marginBottom:4}}>🇺🇸</div>
-          <h1 style={{color:"#f1f5f9",fontSize:26,fontWeight:800,margin:0,letterSpacing:"-0.5px"}}>U.S. Citizenship Exam</h1>
-          <p style={{color:"#94a3b8",fontSize:14,margin:"6px 0 0"}}>128 Official USCIS 2025 Questions</p>
-          <p style={{color:"#64748b",fontSize:11,margin:"4px 0 0"}}>Created by <span style={{color:"#ffffff",fontSize:15,fontWeight:700}}>Sandra Chávez</span></p>
-          <p style={{color:"#64748b",fontSize:10,margin:"2px 0 0"}}>Only for personal study purposes, for Texas</p>
+          <h1 style={{color:W.text,fontSize:26,fontWeight:800,margin:0}}>U.S. Citizenship Exam</h1>
+          <p style={{color:W.sub,fontSize:14,margin:"6px 0 0"}}>128 Official USCIS 2025 Questions</p>
+          <p style={{color:W.sub,fontSize:12,margin:"6px 0 0"}}>Created by <span style={{color:"#1e293b",fontSize:16,fontWeight:700}}>Sandra Chávez</span></p>
+          <p style={{color:"#2563eb",fontSize:12,fontWeight:500,margin:"2px 0 0"}}>Only for personal study purposes, for Texas</p>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
-            <button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:"#1e293b",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"Context: EN → ES":"Contexto: ES → EN"}</button>
-            <button onClick={()=>setStarOnly(s=>!s)} style={{background:starOnly?"#7c3aed":"#1e293b",color:starOnly?"#fff":"#a78bfa",border:"1px solid #6d28d944",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>⭐ 65/20 {starOnly?"ON":"OFF"}</button>
+            <button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:W.pill,color:"#d97706",border:"1px solid #fcd34d",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"Context: EN → ES":"Contexto: ES → EN"}</button>
+            <button onClick={()=>setStarOnly(s=>!s)} style={{background:starOnly?"#7c3aed":W.pill,color:starOnly?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>⭐ 65/20 {starOnly?"ON":"OFF"}</button>
           </div>
-
-          <div style={{marginTop:20,background:"#1e293b",borderRadius:12,padding:14,border:"1px solid #334155"}}>
+          <div style={{marginTop:20,background:W.card,borderRadius:12,padding:14,border:`1px solid ${W.cardBorder}`,boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <span style={{color:"#94a3b8",fontSize:12}}>Progress</span>
-              <span style={{color:"#4ade80",fontSize:14,fontWeight:700}}>{knownSet.size}/{questions.length}</span>
+              <span style={{color:W.sub,fontSize:12}}>Progress</span>
+              <span style={{color:"#059669",fontSize:14,fontWeight:700}}>{knownSet.size}/{questions.length}</span>
             </div>
-            <div style={{background:"#0f172a",borderRadius:8,height:8,overflow:"hidden"}}>
-              <div style={{background:"linear-gradient(90deg,#4ade80,#22d3ee)",height:"100%",width:`${progress}%`,borderRadius:8,transition:"width 0.5s"}}/>
+            <div style={{background:W.pill,borderRadius:8,height:8,overflow:"hidden"}}>
+              <div style={{background:"linear-gradient(90deg,#2563eb,#7c3aed)",height:"100%",width:`${progress}%`,borderRadius:8,transition:"width 0.5s"}}/>
             </div>
-            {knownSet.size > 0 && <button onClick={()=>{setKnownSet(new Set());try{localStorage.removeItem("cp");localStorage.removeItem("s2");localStorage.removeItem("qQs");localStorage.removeItem("qAn");}catch{}}} style={{marginTop:6,background:"none",border:"none",color:"#475569",fontSize:10,cursor:"pointer",textDecoration:"underline"}}>Reset</button>}
+            {knownSet.size>0&&<button onClick={()=>{setKnownSet(new Set());try{["cp3","s3","qQ3","qA3"].forEach(k=>localStorage.removeItem(k));}catch{}}} style={{marginTop:6,background:"none",border:"none",color:W.muted,fontSize:10,cursor:"pointer",textDecoration:"underline"}}>Reset</button>}
           </div>
         </div>
 
-        {/* Resume */}
-        {(()=>{try{const s=JSON.parse(localStorage.getItem("s2")||"{}");const p=JSON.parse(localStorage.getItem("cp")||"{}");if(s.mode==="study"){const pos=p[s.selectedCat||"__all__"]||0;if(pos>0)return<button onClick={()=>startStudy(s.selectedCat)} style={{width:"100%",background:"linear-gradient(135deg,#065f46,#064e3b)",color:"#4ade80",border:"1px solid #10b981",borderRadius:14,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>▶ Continue: {s.selectedCat||"All"} — Q{pos+1}</button>;}return null;}catch{return null;}})()}
+        {(()=>{try{const s=JSON.parse(localStorage.getItem("s3")||"{}");const p=JSON.parse(localStorage.getItem("cp3")||"{}");if(s.mode==="study"){const pos=p[s.selectedCat||"__a"]||0;if(pos>0)return<button onClick={()=>startStudy(s.selectedCat)} style={{width:"100%",background:"linear-gradient(135deg,#059669,#047857)",color:"#fff",border:"none",borderRadius:14,padding:12,fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 2px 8px rgba(5,150,105,0.2)"}}>▶ Continue: {s.selectedCat||"All"} — Q{pos+1}</button>;}return null;}catch{return null;}})()}
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:24}}>
-          <button onClick={()=>startStudy(null)} style={{background:"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,boxShadow:"0 4px 20px rgba(59,130,246,0.3)"}}>
-            <span style={{fontSize:22}}>📖</span>Study All
-          </button>
-          <button onClick={()=>{setSelectedCat(null);setMode("quiz_setup");}} style={{background:"linear-gradient(135deg,#8b5cf6,#7c3aed)",color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,boxShadow:"0 4px 20px rgba(139,92,246,0.3)"}}>
-            <span style={{fontSize:22}}>🧠</span>Practice Test
-          </button>
+          <button onClick={()=>startStudy(null)} style={{background:"linear-gradient(135deg,#2563eb,#1d4ed8)",color:"#fff",border:"none",borderRadius:14,padding:16,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,boxShadow:"0 4px 16px rgba(37,99,235,0.2)"}}><span style={{fontSize:22}}>📖</span>Study All</button>
+          <button onClick={()=>{setSelectedCat(null);setMode("quiz_setup");}} style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fff",border:"none",borderRadius:14,padding:16,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,boxShadow:"0 4px 16px rgba(124,58,237,0.2)"}}><span style={{fontSize:22}}>🧠</span>Practice Test</button>
         </div>
 
-        <h2 style={{color:"#e2e8f0",fontSize:15,fontWeight:700,marginBottom:10}}>Categories</h2>
+        <h2 style={{color:W.text,fontSize:15,fontWeight:700,marginBottom:10}}>Categories</h2>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
           {categories.map(cat=>{
-            const accent=catColors[cat]||"#888";const icon=catIcons[cat]||"📁";
+            const accent=catAccent[cat]||"#2563eb";const icon=catIcons[cat]||"📁";
             const total=questions.filter(q=>q.cat===cat).length;
             const known=questions.filter(q=>q.cat===cat&&knownSet.has(q.id)).length;
             const stars=questions.filter(q=>q.cat===cat&&q.star).length;
-            let sp=0;try{sp=(JSON.parse(localStorage.getItem("cp")||"{}"))[cat]||0;}catch{}
-            return <button key={cat} onClick={()=>startStudy(cat)} style={{background:"#1e293b",border:"none",borderLeft:`4px solid ${accent}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",transition:"all 0.15s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="#253348";e.currentTarget.style.transform="translateX(3px)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="#1e293b";e.currentTarget.style.transform="translateX(0)";}}>
+            let sp=0;try{sp=(JSON.parse(localStorage.getItem("cp3")||"{}"))[cat]||0;}catch{}
+            return <button key={cat} onClick={()=>startStudy(cat)} style={{background:W.card,border:`1px solid ${W.cardBorder}`,borderLeft:`4px solid ${accent}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
+              onMouseEnter={e=>{e.currentTarget.style.background=W.pill;e.currentTarget.style.transform="translateX(3px)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background=W.card;e.currentTarget.style.transform="translateX(0)";}}>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}}>
-                <span style={{color:"#e2e8f0",fontSize:13,fontWeight:600,textAlign:"left"}}>{icon} {cat}</span>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  {stars>0&&<span style={{color:"#a78bfa",fontSize:10}}>⭐{stars}</span>}
-                  {sp>0&&<span style={{color:"#22d3ee",fontSize:10}}>▶ Q{sp+1}</span>}
-                </div>
+                <span style={{color:W.text,fontSize:13,fontWeight:600,textAlign:"left"}}>{icon} {cat}</span>
+                <div style={{display:"flex",gap:6}}>{stars>0&&<span style={{color:"#7c3aed",fontSize:10}}>⭐{stars}</span>}{sp>0&&<span style={{color:"#0891b2",fontSize:10}}>▶ Q{sp+1}</span>}</div>
               </div>
-              <span style={{color:accent,fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{known}/{total}</span>
+              <span style={{color:accent,fontSize:12,fontWeight:700}}>{known}/{total}</span>
             </button>;
           })}
         </div>
-        <p style={{color:"#334155",fontSize:10,textAlign:"center",marginTop:20}}>Based on USCIS M-1778 (09/25) · 2025 Civics Test</p>
+        <p style={{color:W.muted,fontSize:9,textAlign:"center",marginTop:20}}>Based on USCIS M-1778 (09/25) · 2025 Civics Test</p>
       </div>
     </div>
   );
 
   // ─── QUIZ SETUP ───
-  if (mode === "quiz_setup") return (
-    <div style={{minHeight:"100vh",background:bg,padding:"24px 16px",fontFamily:font}}>
+  if(mode==="quiz_setup") return (
+    <div style={{minHeight:"100vh",background:W.bg,padding:"24px 16px",fontFamily:font}}>
       <div style={{maxWidth:520,margin:"0 auto",paddingTop:32}}>
-        <button onClick={()=>setMode("menu")} style={{background:"none",border:"none",color:"#64748b",fontSize:13,cursor:"pointer",marginBottom:20}}>← Menu</button>
-        <h2 style={{color:"#f1f5f9",fontSize:22,fontWeight:800,marginBottom:20}}>🧠 Test Setup</h2>
-        <div style={{background:"#1e293b",borderRadius:14,padding:18,marginBottom:14,border:"1px solid #334155"}}>
-          <label style={{color:"#94a3b8",fontSize:12,display:"block",marginBottom:6}}>Category</label>
-          <select value={selectedCat||""} onChange={e=>setSelectedCat(e.target.value||null)} style={{width:"100%",background:"#0f172a",color:"#e2e8f0",border:"1px solid #334155",borderRadius:8,padding:"8px 10px",fontSize:13}}>
+        <button onClick={()=>setMode("menu")} style={{background:"none",border:"none",color:W.sub,fontSize:13,cursor:"pointer",marginBottom:20}}>← Menu</button>
+        <h2 style={{color:W.text,fontSize:22,fontWeight:800,marginBottom:20}}>🧠 Test Setup</h2>
+        <div style={{background:W.card,borderRadius:14,padding:18,marginBottom:14,border:`1px solid ${W.cardBorder}`}}>
+          <label style={{color:W.sub,fontSize:12,display:"block",marginBottom:6}}>Category</label>
+          <select value={selectedCat||""} onChange={e=>setSelectedCat(e.target.value||null)} style={{width:"100%",background:W.pill,color:W.text,border:`1px solid ${W.cardBorder}`,borderRadius:8,padding:"8px 10px",fontSize:13}}>
             <option value="">All categories</option>
             {categories.map(c=><option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div style={{background:"#1e293b",borderRadius:14,padding:18,marginBottom:14,border:"1px solid #334155"}}>
-          <label style={{color:"#94a3b8",fontSize:12,display:"block",marginBottom:6}}>Questions: <strong style={{color:"#e2e8f0"}}>{quizSize}</strong></label>
-          <input type="range" min={5} max={Math.min(50,(selectedCat?questions.filter(q=>q.cat===selectedCat):questions).length)} value={quizSize} onChange={e=>setQuizSize(+e.target.value)} style={{width:"100%",accentColor:"#8b5cf6"}}/>
+        <div style={{background:W.card,borderRadius:14,padding:18,marginBottom:14,border:`1px solid ${W.cardBorder}`}}>
+          <label style={{color:W.sub,fontSize:12,display:"block",marginBottom:6}}>Questions: <strong style={{color:W.text}}>{quizSize}</strong></label>
+          <input type="range" min={5} max={Math.min(50,(selectedCat?questions.filter(q=>q.cat===selectedCat):questions).length)} value={quizSize} onChange={e=>setQuizSize(+e.target.value)} style={{width:"100%",accentColor:"#7c3aed"}}/>
         </div>
-        <div style={{background:"#1e293b",borderRadius:14,padding:18,marginBottom:20,border:"1px solid #334155"}}>
-          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",color:"#94a3b8",fontSize:12}}>
-            <input type="checkbox" checked={starOnly} onChange={()=>setStarOnly(s=>!s)} style={{accentColor:"#8b5cf6"}}/>
-            ⭐ 65/20 Special Consideration only (20 starred questions)
+        <div style={{background:W.card,borderRadius:14,padding:18,marginBottom:20,border:`1px solid ${W.cardBorder}`}}>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",color:W.sub,fontSize:12}}>
+            <input type="checkbox" checked={starOnly} onChange={()=>setStarOnly(s=>!s)} style={{accentColor:"#7c3aed"}}/>⭐ 65/20 Special Consideration only
           </label>
         </div>
-        <button onClick={startQuiz} style={{width:"100%",background:"linear-gradient(135deg,#8b5cf6,#7c3aed)",color:"#fff",border:"none",borderRadius:14,padding:14,fontSize:15,fontWeight:700,cursor:"pointer"}}>Start Test →</button>
+        <button onClick={startQuiz} style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fff",border:"none",borderRadius:14,padding:14,fontSize:15,fontWeight:700,cursor:"pointer"}}>Start Test →</button>
       </div>
     </div>
   );
 
   // ─── QUIZ ───
-  if (mode === "quiz") {
-    const score = quizSubmitted ? quizQuestions.filter(q=>quizAnswers[q.id]==="correct").length : 0;
-    const passing = quizQuestions.length > 0 ? score/quizQuestions.length >= 0.6 : false;
-    return (
-      <div style={{minHeight:"100vh",background:bg,padding:"24px 16px",fontFamily:font}}>
+  if(mode==="quiz"){
+    const score=quizSubmitted?quizQuestions.filter(q=>quizAnswers[q.id]==="correct").length:0;
+    const pass=quizQuestions.length>0&&score/quizQuestions.length>=0.6;
+    return(
+      <div style={{minHeight:"100vh",background:W.bg,padding:"24px 16px",fontFamily:font}}>
         <div style={{maxWidth:620,margin:"0 auto"}}>
-          <button onClick={()=>setMode("menu")} style={{background:"none",border:"none",color:"#64748b",fontSize:13,cursor:"pointer",marginBottom:14}}>← Menu</button>
-          {quizSubmitted && (
-            <div style={{background:passing?"linear-gradient(135deg,#065f46,#064e3b)":"linear-gradient(135deg,#7f1d1d,#6b2121)",borderRadius:16,padding:20,marginBottom:20,textAlign:"center",border:passing?"1px solid #10b981":"1px solid #ef4444"}}>
-              <div style={{fontSize:40}}>{passing?"🎉":"💪"}</div>
-              <div style={{color:"#f1f5f9",fontSize:26,fontWeight:800}}>{score}/{quizQuestions.length}</div>
-              <div style={{color:"#94a3b8",fontSize:13}}>{passing?"You passed!":"Keep studying!"} — Need 60%</div>
-              <button onClick={()=>setMode("menu")} style={{marginTop:12,background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:10,padding:"8px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Back to Menu</button>
+          <button onClick={()=>setMode("menu")} style={{background:"none",border:"none",color:W.sub,fontSize:13,cursor:"pointer",marginBottom:14}}>← Menu</button>
+          {quizSubmitted&&(
+            <div style={{background:pass?"linear-gradient(135deg,#059669,#047857)":"linear-gradient(135deg,#dc2626,#b91c1c)",borderRadius:16,padding:20,marginBottom:20,textAlign:"center",color:"#fff"}}>
+              <div style={{fontSize:40}}>{pass?"🎉":"💪"}</div>
+              <div style={{fontSize:26,fontWeight:800}}>{score}/{quizQuestions.length}</div>
+              <div style={{fontSize:13,opacity:0.9}}>{pass?"You passed!":"Keep studying!"} — Need 60%</div>
+              <button onClick={()=>setMode("menu")} style={{marginTop:12,background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",borderRadius:10,padding:"8px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Back to Menu</button>
             </div>
           )}
           {quizQuestions.map((q,i)=>(
-            <div key={q.id} style={{background:"#1e293b",borderRadius:14,padding:16,marginBottom:10,border:quizSubmitted?(quizAnswers[q.id]==="correct"?"1px solid #10b981":"1px solid #ef4444"):"1px solid #334155"}}>
+            <div key={q.id} style={{background:W.card,borderRadius:14,padding:16,marginBottom:10,border:quizSubmitted?(quizAnswers[q.id]==="correct"?"2px solid #059669":"2px solid #dc2626"):`1px solid ${W.cardBorder}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
               <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
-                <span style={{color:"#64748b",fontSize:12,fontWeight:700,minWidth:24}}>{i+1}.</span>
-                <span style={{color:"#e2e8f0",fontSize:13,fontWeight:600,flex:1}}>{q.q}</span>
+                <span style={{color:W.muted,fontSize:12,fontWeight:700,minWidth:24}}>{i+1}.</span>
+                <span style={{color:W.text,fontSize:13,fontWeight:600,flex:1}}>{q.q}</span>
                 <AudioBtn text={q.q}/>
               </div>
-              {!quizSubmitted ? (
+              {!quizSubmitted?(
                 <div style={{marginLeft:32}}>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                    <button onClick={()=>setShowAnswer(showAnswer===q.id?null:q.id)} style={{background:"#0f172a",color:"#94a3b8",border:"1px solid #334155",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>{showAnswer===q.id?"Hide":"Answer"}</button>
-                    {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"#0f172a",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
+                    <button onClick={()=>setShowAnswer(showAnswer===q.id?null:q.id)} style={{background:W.pill,color:W.sub,border:`1px solid ${W.cardBorder}`,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>{showAnswer===q.id?"Hide":"Answer"}</button>
+                    {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"#fffbeb",color:"#d97706",border:"1px solid #fcd34d",borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer"}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
                   </div>
-                  {showAnswer===q.id&&<div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6}}><div style={{color:"#4ade80",fontSize:12,padding:"6px 10px",background:"#0a2618",borderRadius:8,flex:1}}>{q.a}</div><AudioBtn text={speakAnswer(q.a)}/></div>}
-                  {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#fbbf24",fontSize:11,lineHeight:1.5,marginBottom:6,padding:"8px 10px",background:"#1c1508",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
+                  {showAnswer===q.id&&<div style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:6}}><div style={{color:"#047857",fontSize:13,padding:"8px 12px",background:"#ecfdf5",borderRadius:8,borderLeft:"3px solid #059669",flex:1}}><AnswerList text={q.a}/></div><AudioBtn text={speakAnswer(q.a)}/></div>}
+                  {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#92400e",fontSize:11,lineHeight:1.5,marginBottom:6,padding:"8px 10px",background:"#fffbeb",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
                   <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>setQuizAnswers(p=>({...p,[q.id]:"correct"}))} style={{flex:1,background:quizAnswers[q.id]==="correct"?"#065f46":"#0f172a",color:quizAnswers[q.id]==="correct"?"#4ade80":"#64748b",border:quizAnswers[q.id]==="correct"?"2px solid #10b981":"1px solid #334155",borderRadius:10,padding:"7px",fontSize:12,fontWeight:600,cursor:"pointer"}}>✓ Knew it</button>
-                    <button onClick={()=>setQuizAnswers(p=>({...p,[q.id]:"wrong"}))} style={{flex:1,background:quizAnswers[q.id]==="wrong"?"#7f1d1d":"#0f172a",color:quizAnswers[q.id]==="wrong"?"#fca5a5":"#64748b",border:quizAnswers[q.id]==="wrong"?"2px solid #ef4444":"1px solid #334155",borderRadius:10,padding:"7px",fontSize:12,fontWeight:600,cursor:"pointer"}}>✗ Didn't</button>
+                    <button onClick={()=>setQuizAnswers(p=>({...p,[q.id]:"correct"}))} style={{flex:1,background:quizAnswers[q.id]==="correct"?"#d1fae5":W.pill,color:quizAnswers[q.id]==="correct"?"#047857":W.sub,border:quizAnswers[q.id]==="correct"?"2px solid #059669":`1px solid ${W.cardBorder}`,borderRadius:10,padding:7,fontSize:12,fontWeight:600,cursor:"pointer"}}>✓ Knew it</button>
+                    <button onClick={()=>setQuizAnswers(p=>({...p,[q.id]:"wrong"}))} style={{flex:1,background:quizAnswers[q.id]==="wrong"?"#fee2e2":W.pill,color:quizAnswers[q.id]==="wrong"?"#dc2626":W.sub,border:quizAnswers[q.id]==="wrong"?"2px solid #dc2626":`1px solid ${W.cardBorder}`,borderRadius:10,padding:7,fontSize:12,fontWeight:600,cursor:"pointer"}}>✗ Didn't</button>
                   </div>
                 </div>
-              ) : (
+              ):(
                 <div style={{marginLeft:32}}>
-                  <div style={{display:"flex",alignItems:"flex-start",gap:6}}><div style={{color:"#94a3b8",fontSize:12,padding:"6px 10px",background:"#0f172a",borderRadius:8,flex:1}}><strong style={{color:"#e2e8f0"}}>A:</strong> {q.a}</div><AudioBtn text={speakAnswer(q.a)}/></div>
-                  {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"none",border:"none",color:"#f59e0b",fontSize:11,cursor:"pointer",padding:0,marginTop:6}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
-                  {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#fbbf24",fontSize:11,lineHeight:1.5,marginTop:4,padding:"8px 10px",background:"#1c1508",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
+                  <div style={{display:"flex",alignItems:"flex-start",gap:6}}><div style={{color:W.text,fontSize:13,padding:"8px 12px",background:W.pill,borderRadius:8,flex:1}}><AnswerList text={q.a}/></div><AudioBtn text={speakAnswer(q.a)}/></div>
+                  {q.ctx&&<button onClick={()=>setQuizShowCtx(p=>({...p,[q.id]:!p[q.id]}))} style={{background:"none",border:"none",color:"#d97706",fontSize:11,cursor:"pointer",marginTop:6}}>📜 {quizShowCtx[q.id]?"Hide":"Context"}</button>}
+                  {quizShowCtx[q.id]&&q.ctx&&<div style={{color:"#92400e",fontSize:11,lineHeight:1.5,marginTop:4,padding:"8px 10px",background:"#fffbeb",borderRadius:8,borderLeft:"3px solid #f59e0b"}}>{getCtx(q)}</div>}
                 </div>
               )}
             </div>
           ))}
-          {!quizSubmitted&&Object.keys(quizAnswers).length===quizQuestions.length&&<button onClick={()=>setQuizSubmitted(true)} style={{width:"100%",background:"linear-gradient(135deg,#8b5cf6,#7c3aed)",color:"#fff",border:"none",borderRadius:14,padding:14,fontSize:15,fontWeight:700,cursor:"pointer",marginTop:14}}>See Results →</button>}
-          {!quizSubmitted&&Object.keys(quizAnswers).length<quizQuestions.length&&<div style={{textAlign:"center",color:"#64748b",fontSize:12,marginTop:10}}>Answered: {Object.keys(quizAnswers).length}/{quizQuestions.length}</div>}
+          {!quizSubmitted&&Object.keys(quizAnswers).length===quizQuestions.length&&<button onClick={()=>setQuizSubmitted(true)} style={{width:"100%",background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fff",border:"none",borderRadius:14,padding:14,fontSize:15,fontWeight:700,cursor:"pointer",marginTop:14}}>See Results →</button>}
+          {!quizSubmitted&&Object.keys(quizAnswers).length<quizQuestions.length&&<div style={{textAlign:"center",color:W.sub,fontSize:12,marginTop:10}}>Answered: {Object.keys(quizAnswers).length}/{quizQuestions.length}</div>}
         </div>
       </div>
     );
   }
 
-  // ─── STUDY MODE ───
-  return (
-    <div style={{minHeight:"100vh",background:bg,padding:"24px 16px",fontFamily:font}}>
+  // ─── STUDY ───
+  return(
+    <div style={{minHeight:"100vh",background:W.bg,padding:"24px 16px",fontFamily:font}}>
       <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{maxWidth:600,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <button onClick={()=>{setMode("menu");setStudyFilter("all");setStarOnly(false);window.speechSynthesis?.cancel();}} style={{background:"none",border:"none",color:"#64748b",fontSize:13,cursor:"pointer"}}>← Menu</button>
-          <span style={{color:"#64748b",fontSize:12}}>{selectedCat||"All Questions"}</span>
+          <button onClick={()=>{setMode("menu");setStudyFilter("all");setStarOnly(false);window.speechSynthesis?.cancel();}} style={{background:"none",border:"none",color:W.sub,fontSize:13,cursor:"pointer"}}>← Menu</button>
+          <span style={{color:W.muted,fontSize:12}}>{selectedCat||"All Questions"}</span>
         </div>
         <div style={{display:"flex",gap:5,marginBottom:16,justifyContent:"center",flexWrap:"wrap"}}>
-          {[["all","All"],["unknown","To Learn"],["known","Learned"]].map(([v,l])=>(
-            <button key={v} onClick={()=>{setStudyFilter(v);setCurrentIdx(0);setShowAnswer(false);setShowContext(false);}} style={{background:studyFilter===v?"#334155":"#1e293b",color:studyFilter===v?"#e2e8f0":"#64748b",border:"1px solid #334155",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>{l}</button>
-          ))}
-          <button onClick={()=>{setStarOnly(s=>!s);setCurrentIdx(0);}} style={{background:starOnly?"#7c3aed":"#1e293b",color:starOnly?"#fff":"#a78bfa",border:"1px solid #6d28d944",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>⭐ 65/20</button>
+          {[["all","All"],["unknown","To Learn"],["known","Learned"]].map(([v,l])=>
+            <button key={v} onClick={()=>{setStudyFilter(v);setCurrentIdx(0);setShowAnswer(false);setShowContext(false);}} style={{background:studyFilter===v?W.pillActive:W.pill,color:studyFilter===v?W.text:W.muted,border:`1px solid ${W.cardBorder}`,borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>{l}</button>
+          )}
+          <button onClick={()=>{setStarOnly(s=>!s);setCurrentIdx(0);}} style={{background:starOnly?"#7c3aed":W.pill,color:starOnly?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:20,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>⭐ 65/20</button>
         </div>
 
-        {filteredQuestions.length===0 ? (
-          <div style={{textAlign:"center",padding:32,color:"#64748b"}}>
+        {filteredQuestions.length===0?(
+          <div style={{textAlign:"center",padding:32,color:W.sub}}>
             <div style={{fontSize:36,marginBottom:8}}>{studyFilter==="known"?"📭":"🎉"}</div>
             <p style={{fontSize:14}}>{studyFilter==="known"?"No learned questions yet":"All done in this set!"}</p>
           </div>
-        ) : currentQ && (
+        ):currentQ&&(
           <>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-              <div style={{flex:1,background:"#1e293b",borderRadius:6,height:5,overflow:"hidden"}}>
-                <div style={{background:catColors[currentQ.cat]||"#4a90d9",height:"100%",width:`${((currentIdx+1)/filteredQuestions.length)*100}%`,borderRadius:6,transition:"width 0.3s"}}/>
+              <div style={{flex:1,background:W.pill,borderRadius:6,height:5,overflow:"hidden"}}>
+                <div style={{background:catAccent[currentQ.cat]||"#2563eb",height:"100%",width:`${((currentIdx+1)/filteredQuestions.length)*100}%`,borderRadius:6,transition:"width 0.3s"}}/>
               </div>
-              <span style={{color:"#64748b",fontSize:11,fontWeight:700}}>{currentIdx+1}/{filteredQuestions.length}</span>
+              <span style={{color:W.muted,fontSize:11,fontWeight:700}}>{currentIdx+1}/{filteredQuestions.length}</span>
             </div>
 
-            <div key={animKey} style={{background:"#1e293b",borderRadius:18,overflow:"hidden",border:"1px solid #334155",boxShadow:"0 6px 30px rgba(0,0,0,0.3)",animation:"fadeIn 0.3s ease"}}>
-              <div style={{background:"#0f172a",padding:"12px 18px",borderBottom:"1px solid #334155",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div key={animKey} style={{background:W.card,borderRadius:18,overflow:"hidden",border:`1px solid ${W.cardBorder}`,boxShadow:"0 4px 20px rgba(0,0,0,0.06)",animation:"fadeIn 0.3s ease"}}>
+              <div style={{background:W.pill,padding:"12px 18px",borderBottom:`1px solid ${W.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{color:catColors[currentQ.cat]||"#4a90d9",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px"}}>{catIcons[currentQ.cat]||""} {currentQ.cat}</span>
+                  <span style={{color:catAccent[currentQ.cat]||"#2563eb",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px"}}>{catIcons[currentQ.cat]||""} {currentQ.cat}</span>
                   {currentQ.star&&<span style={{fontSize:10}}>⭐</span>}
                 </div>
-                <span style={{color:"#475569",fontSize:11,fontWeight:700}}>#{currentQ.id}</span>
+                <span style={{color:W.muted,fontSize:11,fontWeight:700}}>#{currentQ.id}</span>
               </div>
 
               <div style={{padding:"24px 20px"}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                  <p style={{color:"#f1f5f9",fontSize:17,fontWeight:700,lineHeight:1.5,margin:0,flex:1}}>{currentQ.q}</p>
+                  <p style={{color:W.text,fontSize:17,fontWeight:700,lineHeight:1.5,margin:0,flex:1}}>{currentQ.q}</p>
                   <AudioBtn text={currentQ.q} size="md"/>
                 </div>
               </div>
 
               <div style={{padding:"0 20px 20px"}}>
-                {!showAnswer ? (
-                  <button onClick={()=>setShowAnswer(true)} style={{width:"100%",background:"linear-gradient(135deg,#1e40af,#1d4ed8)",color:"#fff",border:"none",borderRadius:12,padding:13,fontSize:14,fontWeight:700,cursor:"pointer"}}>Show Answer</button>
-                ) : (
+                {!showAnswer?(
+                  <button onClick={()=>setShowAnswer(true)} style={{width:"100%",background:"linear-gradient(135deg,#2563eb,#1d4ed8)",color:"#fff",border:"none",borderRadius:12,padding:13,fontSize:14,fontWeight:700,cursor:"pointer"}}>Show Answer</button>
+                ):(
                   <div style={{animation:"fadeIn 0.3s ease"}}>
-                    <div style={{background:"#0a2618",borderRadius:12,padding:14,marginBottom:10,borderLeft:"4px solid #10b981",display:"flex",alignItems:"flex-start",gap:8}}>
-                      <p style={{color:"#4ade80",fontSize:15,fontWeight:600,margin:0,lineHeight:1.5,flex:1}}>{currentQ.a}</p>
+                    <div style={{background:"#ecfdf5",borderRadius:12,padding:14,marginBottom:10,borderLeft:"4px solid #059669",display:"flex",alignItems:"flex-start",gap:8}}>
+                      <div style={{color:"#047857",fontSize:15,fontWeight:600,lineHeight:1.5,flex:1}}><AnswerList text={currentQ.a}/></div>
                       <AudioBtn text={speakAnswer(currentQ.a)} size="md"/>
                     </div>
 
-                    {currentQ.ctx && (
+                    {currentQ.ctx&&(
                       <div style={{marginBottom:10}}>
                         <div style={{display:"flex",gap:6}}>
-                          <button onClick={()=>setShowContext(!showContext)} style={{flex:1,background:"#1c1508",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>📜 {showContext?"Hide Context":"Historical Context"}</button>
-                          {showContext&&currentQ.ctxEs&&<button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:"#1c1508",color:"#f59e0b",border:"1px solid #92400e44",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"ES":"EN"}</button>}
+                          <button onClick={()=>setShowContext(!showContext)} style={{flex:1,background:"#fffbeb",color:"#d97706",border:"1px solid #fcd34d",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>📜 {showContext?"Hide Context":"Historical Context"}</button>
+                          {showContext&&currentQ.ctxEs&&<button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:"#fffbeb",color:"#d97706",border:"1px solid #fcd34d",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"ES":"EN"}</button>}
                         </div>
-                        {showContext&&<div style={{marginTop:6,padding:"12px 14px",background:"#1c1508",borderRadius:10,borderLeft:"3px solid #f59e0b",animation:"fadeIn 0.3s ease"}}><p style={{color:"#fbbf24",fontSize:12,lineHeight:1.6,margin:0}}>{getCtx(currentQ)}</p></div>}
+                        {showContext&&<div style={{marginTop:6,padding:"12px 14px",background:"#fffbeb",borderRadius:10,borderLeft:"3px solid #f59e0b",animation:"fadeIn 0.3s ease"}}><p style={{color:"#92400e",fontSize:12,lineHeight:1.6,margin:0}}>{getCtx(currentQ)}</p></div>}
                       </div>
                     )}
 
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{if(!knownSet.has(currentQ.id))toggleKnown(currentQ.id);window.speechSynthesis?.cancel();nav(1);}} style={{flex:1,background:"#065f46",color:"#4ade80",border:"2px solid #10b981",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ I know it</button>
-                      <button onClick={()=>{if(knownSet.has(currentQ.id))toggleKnown(currentQ.id);window.speechSynthesis?.cancel();nav(1);}} style={{flex:1,background:"#7f1d1d",color:"#fca5a5",border:"2px solid #ef4444",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✗ Review</button>
+                      <button onClick={()=>{if(!knownSet.has(currentQ.id))toggleKnown(currentQ.id);window.speechSynthesis?.cancel();nav(1);}} style={{flex:1,background:"#d1fae5",color:"#047857",border:"2px solid #059669",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ I know it</button>
+                      <button onClick={()=>{if(knownSet.has(currentQ.id))toggleKnown(currentQ.id);window.speechSynthesis?.cancel();nav(1);}} style={{flex:1,background:"#fee2e2",color:"#dc2626",border:"2px solid #dc2626",borderRadius:12,padding:11,fontSize:13,fontWeight:700,cursor:"pointer"}}>✗ Review</button>
                     </div>
                   </div>
                 )}
@@ -467,8 +432,8 @@ export default function App() {
             </div>
 
             <div style={{display:"flex",justifyContent:"space-between",marginTop:16}}>
-              <button onClick={()=>{window.speechSynthesis?.cancel();nav(-1);}} disabled={currentIdx===0} style={{background:"#1e293b",color:currentIdx===0?"#334155":"#94a3b8",border:"1px solid #334155",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:currentIdx===0?"default":"pointer"}}>← Prev</button>
-              <button onClick={()=>{window.speechSynthesis?.cancel();nav(1);}} disabled={currentIdx>=filteredQuestions.length-1} style={{background:"#1e293b",color:currentIdx>=filteredQuestions.length-1?"#334155":"#94a3b8",border:"1px solid #334155",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:currentIdx>=filteredQuestions.length-1?"default":"pointer"}}>Next →</button>
+              <button onClick={()=>{window.speechSynthesis?.cancel();nav(-1);}} disabled={currentIdx===0} style={{background:W.card,color:currentIdx===0?W.muted:W.text,border:`1px solid ${W.cardBorder}`,borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:currentIdx===0?"default":"pointer"}}>← Prev</button>
+              <button onClick={()=>{window.speechSynthesis?.cancel();nav(1);}} disabled={currentIdx>=filteredQuestions.length-1} style={{background:W.card,color:currentIdx>=filteredQuestions.length-1?W.muted:W.text,border:`1px solid ${W.cardBorder}`,borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:currentIdx>=filteredQuestions.length-1?"default":"pointer"}}>Next →</button>
             </div>
           </>
         )}
