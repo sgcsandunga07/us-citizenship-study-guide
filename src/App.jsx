@@ -227,9 +227,9 @@ export default function App() {
         <div style={{textAlign:"center",marginBottom:28,paddingTop:12}}>
           <div style={{fontSize:44,marginBottom:4}}>🇺🇸</div>
           <h1 style={{color:W.text,fontSize:26,fontWeight:800,margin:0}}>U.S. Citizenship Exam</h1>
-          <p style={{color:W.sub,fontSize:16,margin:"6px 0 0"}}>128 Official USCIS 2025 Questions</p>
-          <p style={{color:W.sub,fontSize:16,margin:"6px 0 0"}}>App Created by <span style={{color:"#1e293b",fontSize:20,fontWeight:700}}>Sandra Chávez</span></p>
-          <p style={{color:"#2563eb",fontSize:16,fontWeight:500,margin:"2px 0 0"}}>Only for personal study purposes, for Texas</p>
+          <p style={{color:W.sub,fontSize:14,margin:"6px 0 0"}}>128 Official USCIS 2025 Questions</p>
+          <p style={{color:W.sub,fontSize:12,margin:"6px 0 0"}}>Created by <span style={{color:"#1e293b",fontSize:16,fontWeight:700}}>Sandra Chávez</span></p>
+          <p style={{color:"#2563eb",fontSize:12,fontWeight:500,margin:"2px 0 0"}}>Only for personal study purposes, for Texas</p>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12,flexWrap:"wrap"}}>
             <button onClick={()=>setCtxLang(l=>l==="en"?"es":"en")} style={{background:W.pill,color:"#d97706",border:"1px solid #fcd34d",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>🌐 {ctxLang==="en"?"Context: EN → ES":"Contexto: ES → EN"}</button>
             <button onClick={()=>setStarOnly(s=>!s)} style={{background:starOnly?"#7c3aed":W.pill,color:starOnly?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:20,padding:"5px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>⭐ 65/20 {starOnly?"ON":"OFF"}</button>
@@ -324,7 +324,7 @@ export default function App() {
             <div key={q.id} style={{background:W.card,borderRadius:14,padding:16,marginBottom:10,border:quizSubmitted?(quizAnswers[q.id]==="correct"?"2px solid #059669":"2px solid #dc2626"):`1px solid ${W.cardBorder}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
               <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
                 <span style={{color:W.muted,fontSize:12,fontWeight:700,minWidth:24}}>{i+1}.</span>
-                <span style={{color:W.text,fontSize:13,fontWeight:600,flex:1}}>{q.q}</span>
+                <span style={{color:W.text,fontSize:13,fontWeight:600,flex:1}}><span style={{color:catAccent[q.cat]||"#2563eb",fontWeight:700}}>Q{q.id}.</span> {q.q}</span>
                 <AudioBtn text={q.q}/>
               </div>
               {!quizSubmitted?(
@@ -397,7 +397,7 @@ export default function App() {
 
               <div style={{padding:"24px 20px"}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                  <p style={{color:W.text,fontSize:17,fontWeight:700,lineHeight:1.5,margin:0,flex:1}}>{currentQ.q}</p>
+                  <p style={{color:W.text,fontSize:17,fontWeight:700,lineHeight:1.5,margin:0,flex:1}}><span style={{color:catAccent[currentQ.cat]||"#2563eb",marginRight:6}}>Q{currentQ.id}.</span>{currentQ.q}</p>
                   <AudioBtn text={currentQ.q} size="md"/>
                 </div>
               </div>
